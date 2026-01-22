@@ -27,7 +27,7 @@ export default class Zena {
   public interactionsFolder = "interactions";
   public registersFolder = "registers";
 
-  public rest: ZenaRest;
+  public rest!: ZenaRest;
 
   public __internal__!: {
     intents: GatewayIntentBits | 0;
@@ -40,14 +40,14 @@ export default class Zena {
     manager: WebSocketManager;
   };
 
-  constructor(private intents: GatewayIntentBits | 0 = 0) {
+  async init(intents: GatewayIntentBits | 0 = 0) {
     const rest = new ZenaRest();
 
     this.rest = rest;
 
     const manager = new WebSocketManager({
       token: process.env.TOKEN,
-      intents: this.intents,
+      intents,
       rest: rest,
     });
 
@@ -56,26 +56,38 @@ export default class Zena {
       gateway: manager,
     });
 
-    (async () => {
-      this.__internal__ = {
-        intents: this.intents,
-        parsers: new Map(),
-        client,
-        rest,
-        manager,
-      };
+    this.__internal__ = {
+      intents,
+      parsers: new Map(),
+      client,
+      rest,
+      manager,
+    };
 
-      this._user = await this.__internal__.rest.getMe();
-
-      await Manager(this);
-    })();
+    await Manager(this);
   }
 
-  static async Run(path: string, intents: GatewayIntentBits | 0 = 0) {
-    let cl = (await import(process.cwd() + "/" + path)).default as typeof Zena;
+  static async Run(options: {
+    mainFile: string;
+    intents: (keyof typeof GatewayIntentBits)[];
+    eventsFolder?: string;
+    interactionsFolder?: string;
+    registersFolder?: string;
+  }): Promise<void> {
+    let cl = (await import(process.cwd() + "/" + options.mainFile))
+      .default as typeof Zena;
 
-    let bot = new cl(intents);
+    let bot = new cl();
 
+    await bot.init(
+      options.intents
+        .map((i) => GatewayIntentBits[i])
+        .reduce((a: number, b) => a | b, 0),
+    );
+    if (options.eventsFolder) bot.eventsFolder = options.eventsFolder;
+    if (options.interactionsFolder)
+      bot.interactionsFolder = options.interactionsFolder;
+    if (options.registersFolder) bot.registersFolder = options.registersFolder;
     await bot.__internal__.manager.connect();
   }
 

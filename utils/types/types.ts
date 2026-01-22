@@ -106,5 +106,5 @@ export type DiscordGuild = {
 
 export type ParserElement = {
   name: string;
-  execute: (...args: any[]) => void;
+  execute: (...args: any[]) => Promise<void> | void;
 };

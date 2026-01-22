@@ -18,7 +18,10 @@ export async function GatherEvents(
   let importedEvents = (await Promise.all(
     filePaths.map(async (file) => {
       const mod = await import(file);
-      return mod.default;
+      return {
+        name: file.split("/").pop()?.split(".")[0],
+        execute: mod.default,
+      };
     }),
   )) as Event[];
 
